@@ -1,0 +1,233 @@
+---
+title: "Exploring the BRFSS data"
+output: 
+  html_document: 
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+### Load data
+
+Make sure your data and R Markdown files are in the same directory. When loaded
+your data file will be called `brfss2013`. Delete this note when before you submit 
+your work. 
+
+```{r load-data}
+load("brfss2013.RData")
+attach(brfss2013)
+```
+
+
+
+* * *
+
+## Part 1: Data
+Random sampling?
+
+"The survey is conducted using Random Digit Dialing (RDD) techniques on both landlines and cell phones." Source: https://www.cdc.gov/brfss/about/brfss_faq.htm
+Sampling appears to be random, therefore, results can be generalized to the population of the US.However, there might be some selection bias introduced due to the survey being telephone-based. A proportion of the population of interest might not own telephones; landlines or cellular.
+
+Random assignment?
+
+Since this is a cross-sectional study, it is observational, not interventional, So random assignment is not possible. Therefore, we cannot establish causality, only associations.
+
+* * *
+
+## Part 2: Research questions
+
+**Research quesion 1:**
+
+My parents are both doctors and my mother sleeps for much longer than my father!
+Does your biological sex affect how long you sleep?
+Which sex sleeps longer ? (grouping both sexes 
+by employment status to reduce the effect of employment as a confounder).
+
+**Research quesion 2:**
+
+Does the prevalence of high blood cholesterol affect that of heart diseases or strokes?
+According to the Mayo Clinic, high cholesterol is a risk factor for heart disease and strokes.Does this data confirm that?
+Source: https://www.mayoclinic.org/diseases-conditions/high-blood-cholesterol/symptoms-causes/syc-20350800
+
+**Research quesion 3:**
+
+Does satisfaction with life increase with income?
+Since I'm currently broke, I'd like to know.
+
+* * *
+
+## Part 3: Exploratory data analysis
+
+NOTE: Insert code chunks as needed by clicking on the "Insert a new code chunk" 
+button (green button with orange arrow) above. Make sure that your code is visible
+in the project you submit. Delete this note when before you submit your work.
+
+**Research quesion 1:**
+
+Difference between males and females in mean sleeping duration and average alcohol drinking per day in the last 30 days.
+
+```{r}
+brfss2013 <- brfss2013 %>%
+ filter(!is.na(addepev2), !is.na(sleptim1), !is.na(avedrnk2))
+```
+```{r}
+brfss2013 %>%
+  group_by(addepev2) %>%
+  summarise(mean_sleep = mean(sleptim1), mean_av_alcohol = mean(avedrnk2))
+```
+
+```{r}
+ggplot(data = brfss2013, aes(x = avedrnk2, y = sleptim1)) +
+  geom_point() + geom_smooth(method = "lm", colour = "red") +
+  facet_grid(~ addepev2)
+```
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(educa), !is.na(avedrnk2), !is.na(sex))
+```
+
+```{r}
+ggplot(data = brfss2013, aes(x = educa, y = avedrnk2, fill = educa)) +
+  geom_col() +
+  labs(x = "Level of Education", y = "Average Alcohol Intake", fill ="Education") +
+  ggtitle("Relationship between Education and Alcohol Consumption") +
+  scale_x_discrete(labels = abbreviate) +
+  facet_grid(~ sex) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+```{r}
+ggplot(data = brfss2013, aes(x = educa , y = avedrnk2, fill = educa)) +
+  geom_col(na.rm = T) +
+  labs(x = "Level of Education", y = "Average Alcohol Intake", fill ="Education") +
+  ggtitle("Relationship between Education and Alcohol Consumption") +
+  scale_x_discrete(labels = abbreviate) +
+  scale_y_continuous(limits = c(0,2000)) +
+  facet_grid(~ sex) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+```{r}
+ggplot(data = brfss2013, aes(x = educa , y = avedrnk2, fill = educa)) +
+  geom_col(na.rm = T) +
+  labs(x = "Level of Education", y = "Average Alcohol Intake", fill ="Education") +
+  ggtitle("Relationship between Education and Alcohol Consumption") +
+  scale_x_discrete(labels = abbreviate) +
+  expand_limits(y = c(0,80)) +
+  facet_grid(~ sex) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+
+
+```{r}
+brfss2013 <- brfss2013 %>%
+ filter(!is.na(X_bmi5cat), !is.na(cvdcrhd4), !is.na(toldhi2))
+```
+
+```{r}
+ggplot(brfss2013, aes(x = toldhi2, fill = cvdinfr4)) +
+  geom_bar(position = "fill",) +
+  labs(x = "High Cholesterol", y = "Heart Attack") +
+  ggtitle("Associaton between High Cholesterol and Heart Attacks") +
+  scale_fill_discrete(name = "High Cholesterol") +
+  facet_grid(~ X_bmi5cat) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+**Research quesion 2:**
+
+Relationship between frequency of fruit intake and number of days with poor physical health
+```{r}
+brfss2013 %>%
+  mutate(men = as.numeric(as.character(nummen)), women = as.numeric(as.character(numwomen))) %>%
+  filter(!is.na(men), !is.na(women), !is.na(sex)) %>%
+  group_by(sex) %>%
+  summarise(meanmen = mean(men), meanwomen = mean(women))
+ggplot(brfss2013, aes(x= men, y= women))+
+  geom_point()
+```
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(educa), !is.na(checkup1), !is.na(sex))
+```
+```{r}
+library(ggthemes)
+ggplot(data = brfss2013, aes(x = educa , y = checkup1, fill = educa)) +
+  geom_count() + 
+  labs(x = "Level of Education", y = "Time Since Last Checkup", fill = "Education") +
+  ggtitle("El") +
+  facet_grid(~ sex) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(prediab1), !is.na(fruit1), !is.na(sex))
+library(ggthemes)
+ggplot(data = brfss2013, aes(x = prediab1 , y = fruit1, fill = prediab1)) +
+  geom_col() + 
+  labs(x = "Level of Education", y = "Average Alcohol Intake", fill = "Education") +
+  ggtitle("Relationship between Education and Alcohol Consumption") +
+  scale_fill_discrete(name = "Education") +
+  facet_grid(~ sex) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) 
+```
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(toldhi2))
+ggplot(data = brfss2013, aes(x = bphigh4, y = cvdstrk3)) +
+  geom_col(na.rm = TRUE) +
+  facet_grid(~ toldhi2)
+```
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(sex), !is.na(fruit1), !is.na(physhlth))
+brfss2013 %>%
+  group_by(sex) %>%
+  summarise(meanfruit = mean(fruit1), meanphysical_notgood = mean(physhlth))
+```
+
+```{r}
+ggplot(data = brfss2013, aes(x = fruit1, y = physhlth)) +
+  geom_point() + geom_smooth(method = "lm", colour = "red") +
+  facet_grid(~ sex)
+```
+
+```{r}
+
+```
+
+**Research quesion 3:**
+
+The relationship between income and satisfation with life
+
+```{r}
+brfss2013 <- brfss2013 %>%
+  filter(!is.na(income2), !is.na(lsatisfy))
+ggplot(brfss2013, aes(x = income2, fill = lsatisfy)) +
+  geom_bar(position = "fill",) +
+  labs(x = "Income Level", y = "Satisfaction with Life") +
+  ggtitle("Associaton between Income and Satisfaction with life") +
+  scale_fill_discrete(name = "Satisfaction with Life") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+```{r}
+v3 <- table(income2, lsatisfy)
+plot(v3)
+```
+
